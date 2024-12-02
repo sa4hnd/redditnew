@@ -1,4 +1,4 @@
-# Chrome Extension with AI-Driven Chat and Automation for reddit Automatic Chatting
+# Chrome Extension with AI-Driven Chat and Automation for reddit Automatic Chatting called HamzaniBot
 
 for every library or a package u need to tell me because i have no experince in chrome extension development
 
@@ -104,7 +104,7 @@ Create a fully operational Chrome Extension for https://chat.reddit.com that wil
   - Accepted requests.  
 
 ---
-
+NOTE THERY IMPORTANT : every settings and toggle and inputs and option before AI CHATTER should use and talk depending on the settings and act like settings selected 
 ## **Project Structure**  
 
 ### **File Organization**  
@@ -161,5 +161,6 @@ Create a fully operational Chrome Extension for https://chat.reddit.com that wil
 - Test OpenAI API calls for accuracy and response times.  
 - Implement data validation and error handling in all modules.  
 - Use Chrome Extension debugging tools for performance optimization.  
+for the design look at the pictures provided and the extension is in the right side of ther images ![alt text](photo_2024-12-02_20-15-25.jpg) ![alt text](photo_2024-12-02_20-15-24.jpg)
 
 By following this structure and functionality, your Chrome Extension will be a powerful tool for AI-driven automation and user interaction.
