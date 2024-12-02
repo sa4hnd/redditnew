@@ -1,38 +1,56 @@
 import mongodb from './services/mongodb.js';
 
-let debuggeeTabId = null;
+let debuggeeId = null;
+let debuggerAttached = false;
 
 // Function to attach debugger to a tab
 async function attachDebugger(tabId) {
-  try {
-    // Attach debugger with all required capabilities
-    await chrome.debugger.attach({ tabId }, "1.3");
-    debuggeeTabId = tabId;
+  if (debuggerAttached) {
+    await chrome.debugger.detach({ tabId: debuggeeId });
+  }
 
-    // Enable all required debugging features
+  try {
+    // This will show "This site is being debugged by extension" in Chrome
+    await chrome.debugger.attach({ tabId }, "1.3");
+    debuggeeId = tabId;
+    debuggerAttached = true;
+
+    // Enable all required debugging domains
     await Promise.all([
       chrome.debugger.sendCommand({ tabId }, "Debugger.enable"),
       chrome.debugger.sendCommand({ tabId }, "Network.enable"),
-      chrome.debugger.sendCommand({ tabId }, "Page.enable"),
-      chrome.debugger.sendCommand({ tabId }, "Runtime.enable"),
       chrome.debugger.sendCommand({ tabId }, "DOM.enable"),
-      chrome.debugger.sendCommand({ tabId }, "Security.enable")
+      chrome.debugger.sendCommand({ tabId }, "Runtime.enable"),
+      chrome.debugger.sendCommand({ tabId }, "Page.enable"),
+      chrome.debugger.sendCommand({ tabId }, "Console.enable")
     ]);
 
-    // Set up request interception
+    // Set breakpoints for chat functionality
+    await chrome.debugger.sendCommand({ tabId }, "Debugger.setBreakpointByUrl", {
+      lineNumber: 0,
+      urlRegex: ".*chat\.reddit\.com.*"
+    });
+
+    // Monitor network requests
     await chrome.debugger.sendCommand({ tabId }, "Network.setRequestInterception", {
-      patterns: [{ urlPattern: "*" }]
+      patterns: [{
+        urlPattern: "*",
+        resourceType: "XHR",
+        interceptionStage: "Request"
+      }]
     });
 
-    // Start debugging session
+    // Execute debug script
     await chrome.debugger.sendCommand({ tabId }, "Runtime.evaluate", {
-      expression: `console.log("[CupidBotOFM.ai] Started debugging this browser")`
+      expression: `
+        console.log("%cCupidBotOFM.ai Debugger Attached", "color: #8b5cf6; font-size: 20px; font-weight: bold");
+        window.__cupidBotDebugger = true;
+      `
     });
 
-    // Notify that debugging is active
-    chrome.tabs.sendMessage(tabId, { type: "DEBUG_STARTED" });
   } catch (error) {
-    console.error("Debugger attachment failed:", error);
+    console.error("Failed to attach debugger:", error);
+    debuggerAttached = false;
   }
 }
 
@@ -53,44 +71,61 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
 });
 
 // Handle debugger events
-chrome.debugger.onEvent.addListener((debuggeeId, method, params) => {
-  if (!debuggeeId.tabId) return;
+chrome.debugger.onEvent.addListener((source, method, params) => {
+  if (!source.tabId || source.tabId !== debuggeeId) return;
 
   switch (method) {
+    case "Debugger.paused":
+      handleDebuggerPaused(source.tabId, params);
+      break;
     case "Network.requestIntercepted":
-      handleInterceptedRequest(debuggeeId.tabId, params);
+      handleInterceptedRequest(source.tabId, params);
       break;
     case "Network.responseReceived":
-      handleResponse(debuggeeId.tabId, params);
+      handleNetworkResponse(source.tabId, params);
       break;
   }
 });
 
 // Handle detachment
 chrome.debugger.onDetach.addListener((source) => {
-  if (source.tabId === debuggeeTabId) {
-    debuggeeTabId = null;
+  if (source.tabId === debuggeeId) {
+    debuggeeId = null;
+    debuggerAttached = false;
   }
 });
 
-async function handleInterceptedRequest(tabId, params) {
-  try {
-    // Continue the request but monitor it
-    await chrome.debugger.sendCommand(
-      { tabId },
-      "Network.continueInterceptedRequest",
-      { interceptionId: params.interceptionId }
-    );
-  } catch (error) {
-    console.error("Error handling intercepted request:", error);
-  }
+async function handleDebuggerPaused(tabId, params) {
+  // Analyze call stack and variables
+  const callFrames = params.callFrames;
+  const stackTrace = await Promise.all(callFrames.map(async frame => {
+    const scopeChain = await Promise.all(frame.scopeChain.map(async scope => {
+      const { result } = await chrome.debugger.sendCommand(
+        { tabId },
+        "Runtime.getProperties",
+        { objectId: scope.object.objectId }
+      );
+      return result;
+    }));
+    return { frame, scopeChain };
+  }));
+
+  // Continue execution
+  await chrome.debugger.sendCommand({ tabId }, "Debugger.resume");
 }
 
-async function handleResponse(tabId, params) {
-  // Monitor responses for chat messages and other relevant data
-  if (params.response.url.includes("chat.reddit.com")) {
-    // Process chat data
+async function handleInterceptedRequest(tabId, params) {
+  // Monitor and modify chat requests if needed
+  const request = params.request;
+  if (request.url.includes("chat.reddit.com")) {
+    // Analyze and potentially modify request
   }
+  
+  await chrome.debugger.sendCommand(
+    { tabId },
+    "Network.continueInterceptedRequest",
+    { interceptionId: params.interceptionId }
+  );
 }
 
 // Store bot configuration
