@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>HamzaniBot</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>HamzaniBot.ai</h1>
+      <div class="status-bar">
+        <div class="conversations-left">
+          <span id="conversationsCount">101</span> conversations left
+          <button class="get-more-btn">Get more</button>
+        </div>
+        <div class="power-button">
+          <button id="masterSwitch" class="power-btn"></button>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <div class="navigation">
+        <button class="nav-btn active" data-section="chatting">
+          <span class="icon">💬</span> Chatting
+        </button>
+        <button class="nav-btn" data-section="photos">
+          <span class="icon">📸</span> Photos
+        </button>
+        <button class="nav-btn" data-section="rotating-ctas">
+          <span class="icon">🔄</span> Rotating CTAs
+        </button>
+        <button class="nav-btn" data-section="settings">
+          <span class="icon">⚙️</span> Settings
+        </button>
+      </div>
+
+      <div id="sections">
+        <!-- Sections will be dynamically loaded -->
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 
